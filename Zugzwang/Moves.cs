@@ -4,40 +4,39 @@
 
 namespace Zugzwang
 {
-    using System;
-
     /// <summary>
     /// Class that calculates all valid moves
     /// </summary>
     public class Moves
     {
-        ulong WhiteKingValid;
-        ulong BlackKingValid;
-        ulong WhiteKnightValid;
-        ulong BlackKnightValid;
-        ulong WhitePawnValid;
-        ulong BlackPawnValid;
-        // const ulong  MASK_FILE_H = 0x80808080808080; my one
-
         /// <summary>
         /// Bitboard of the H file
         /// </summary>
-        public const ulong MaskFileH = 0x7F7F7F7F7F7F7F7F; // other guys one
+        public const ulong MaskFileH = 0x7F7F7F7F7F7F7F7F;
 
         /// <summary>
         /// Bitboard of the A file
         /// </summary>
         public const ulong MaskFileA = 0xFEFEFEFEFEFEFEFE;
 
+        // other guys one
         /// <summary>
         /// Bitboard of the B file
         /// </summary>
         public const ulong MaskFileB = 0xFDFDFDFDFDFDFDFD;
 
+        // const ulong  MASK_FILE_H = 0x80808080808080; my one
         /// <summary>
         /// Bitboard of the G file
         /// </summary>
         public const ulong MaskFileG = 0xBFBFBFBFBFBFBFBF;
+
+        private ulong WhiteKingValid;
+        private ulong BlackKingValid;
+        private ulong WhiteKnightValid;
+        private ulong BlackKnightValid;
+        private ulong WhitePawnValid;
+        private ulong BlackPawnValid;
 
         /// <summary>
         /// Check of if En Passant is possible
@@ -58,9 +57,9 @@ namespace Zugzwang
         {
             // NEED TO ADD ENPASSANT CHECK
             // PROMOTIONS?
-            if (this.isEnPassant == true)
-            {
-            }
+
+            ulong whitePawnLeftEnPassant = (whitePawnLocation & MaskFileA) << 7;
+            ulong whitePawnRightEnPassant = (whitePawnLocation & MaskFileH) << 9;
 
             ulong whitePawnUpOne = (whitePawnLocation << 8) & ~allPieces;
             ulong whitePawnUpTwo = ((whitePawnLocation & BoardGeneration.InitialWhitePawns) << 16) & ~allPieces;
@@ -71,6 +70,11 @@ namespace Zugzwang
             ulong whitePawnRightAttack = (whitePawnLocation & MaskFileH) << 9;
 
             ulong validPawnAttacks = (whitePawnLeftAttack | whitePawnRightAttack) & allBlackPieces;
+
+            if (this.isEnPassant == true)
+            {
+                validPawnAttacks += whitePawnLeftEnPassant | whitePawnRightEnPassant;
+            }
 
             ulong whitePawnValidMoves = validPawnPushes | validPawnAttacks;
 
@@ -88,10 +92,12 @@ namespace Zugzwang
         {
             // NEED TO ADD ENPASSANT CHECK
             // PROMOTIONS?
+
+            ulong blackPawnLeftEnPassant = (blackPawnLocation & MaskFileA) << 7;
+            ulong blackPawnRightEnPassant = (blackPawnLocation & MaskFileH) << 9;
+
             ulong blackPawnUpOne = (blackPawnLocation >> 8) & ~allPieces;
             ulong blackPawnUpTwo = ((blackPawnLocation & BoardGeneration.InitialBlackPawns) >> 16) & ~allPieces;
-
-            ulong blackPawnEnPassant = (blackPawnLocation)
 
             ulong validPawnPushes = blackPawnUpOne | blackPawnUpTwo;
 
@@ -99,6 +105,11 @@ namespace Zugzwang
             ulong blackPawnRightAttack = (blackPawnLocation & MaskFileH) >> 9;
 
             ulong validPawnAttacks = (blackPawnLeftAttack | blackPawnRightAttack) & allWhitePieces;
+
+            if (this.isEnPassant == true)
+            {
+                validPawnAttacks += blackPawnRightEnPassant | blackPawnLeftEnPassant;
+            }
 
             ulong blackPawnValidMoves = validPawnPushes | validPawnAttacks;
 
@@ -197,15 +208,14 @@ namespace Zugzwang
             ulong validRookMoves;
 
             // ulong validRookMoves = validHorizontalMoves | validVerticalMoves;
-            
 
             // long possibilitiesHorizontal = (OCCUPIED - 2 * binaryS) ^ Long.reverse(Long.reverse(OCCUPIED) - 2 * Long.reverse(binaryS));
             // long possibilitiesVertical = ((OCCUPIED & FileMasks8[s % 8]) - (2 * binaryS)) ^ Long.reverse(Long.reverse(OCCUPIED & FileMasks8[s % 8]) - (2 * Long.reverse(binaryS)));
             // return (possibilitiesHorizontal & RankMasks8[s / 8]) | (possibilitiesVertical & FileMasks8[s % 8]);
-            ulong validSouthAttacks = southAttacks(rookLocation, ~allPieces);
-            ulong validNorthAttacks = northAttacks(rookLocation, ~allPieces);
-            ulong validEastAttacks = eastAttacks(rookLocation, ~allPieces);
-            ulong validWestAttacks = westAttacks(rookLocation, ~allPieces);
+            ulong validSouthAttacks = SouthAttacks(rookLocation, ~allPieces);
+            ulong validNorthAttacks = NorthAttacks(rookLocation, ~allPieces);
+            ulong validEastAttacks = EastAttacks(rookLocation, ~allPieces);
+            ulong validWestAttacks = WestAttacks(rookLocation, ~allPieces);
 
             validRookMoves = validSouthAttacks | validNorthAttacks | validEastAttacks | validWestAttacks;
             return validRookMoves;
@@ -229,12 +239,12 @@ namespace Zugzwang
         {
             ulong validQueenMoves;
 
-            validQueenMoves = ComputeBishops(queenLocation, allPieces) | ComputeRooks (queenLocation, allPieces);
+            validQueenMoves = ComputeBishops(queenLocation, allPieces) | ComputeRooks(queenLocation, allPieces);
 
             return validQueenMoves;
         }
 
-        public ulong southAttacks(ulong rooks, ulong empty)
+        public ulong SouthAttacks(ulong rooks, ulong empty)
         {
             ulong flood = rooks;
             flood |= rooks = (rooks >> 8) & empty;
@@ -248,7 +258,7 @@ namespace Zugzwang
             return validSouthMoves;
         }
 
-        public ulong northAttacks(ulong rooks, ulong empty)
+        public ulong NorthAttacks(ulong rooks, ulong empty)
         {
             ulong flood = rooks;
             flood |= rooks = (rooks << 8) & empty;
@@ -262,7 +272,7 @@ namespace Zugzwang
             return validNorthMoves;
         }
 
-        public ulong eastAttacks(ulong rooks, ulong empty)
+        public ulong EastAttacks(ulong rooks, ulong empty)
         {
             ulong flood = rooks;
             empty &= MaskFileA;
@@ -277,7 +287,7 @@ namespace Zugzwang
             return validEastMoves;
         }
 
-        public ulong westAttacks(ulong rooks, ulong empty)
+        public ulong WestAttacks(ulong rooks, ulong empty)
         {
             ulong flood = rooks;
             empty &= MaskFileH;
@@ -292,7 +302,7 @@ namespace Zugzwang
             return validWestMoves;
         }
 
-        public ulong northEastAttacks (ulong bishops, ulong empty)
+        public ulong northEastAttacks(ulong bishops, ulong empty)
         {
             ulong flood = bishops;
             empty &= MaskFileA;
@@ -303,11 +313,11 @@ namespace Zugzwang
             flood |= bishops = (bishops << 9) & empty;
             flood |= (bishops << 9) & empty;
 
-            ulong validNorthEastAttacks =  (flood << 9) & MaskFileA;
+            ulong validNorthEastAttacks = (flood << 9) & MaskFileA;
             return validNorthEastAttacks;
         }
 
-        public ulong southEastAttacks (ulong bishops, ulong empty)
+        public ulong southEastAttacks(ulong bishops, ulong empty)
         {
             ulong flood = bishops;
             empty &= MaskFileA;
@@ -338,7 +348,7 @@ namespace Zugzwang
             return validNorthWestAttacks;
         }
 
-        public ulong southWestAttacks (ulong bishops, ulong empty)
+        public ulong southWestAttacks(ulong bishops, ulong empty)
         {
             ulong flood = bishops;
             empty &= MaskFileH;
